@@ -44,17 +44,20 @@ def process_price_data(dolar_kuru, price_str):
     return 0
 
 
-def process_stock_data(stok_data_lst):
+def process_stock_data(stok_data_lst, dolar_kuru):
     result = {}
     for stok_data in stok_data_lst:
         new_stok = dict()
         new_stok["BARKOD"] = stok_data["BARKOD"]
+        prices = [0]
         for i in [1, 3]:
             field_name = f"L.Fiy. {i}"
-            if stok_data[field_name] != "0,00 ₺":
-                new_stok["Price"] = stok_data[field_name]
-        if new_stok.get("Price") is None:
-            new_stok["Price"] = ""
+            if not stok_data[field_name].startswith("0,00"):
+                stok_data[field_name] = process_price_data(
+                    dolar_kuru, stok_data[field_name]
+                )
+                prices.append(stok_data[field_name])
+            new_stok["Price"] = max(prices)
         result[new_stok["BARKOD"]] = new_stok
     return result
 
@@ -75,7 +78,7 @@ def main(stok, kargo, ticimax, dolar_kuru, output):
     stok_data = stok_data.rename(columns={"Stok Kodu": "BARKOD"})
     stok_data = stok_data[stok_data["BARKOD"].isin(ticimax_data["BARKOD"])]
     stok_data_lst = stok_data.to_dict("records")
-    stok_data_dict = process_stock_data(stok_data_lst)
+    stok_data_dict = process_stock_data(stok_data_lst, dolar_kuru)
 
     ticimax_data_lst = ticimax_data.to_dict("records")
 
@@ -84,7 +87,7 @@ def main(stok, kargo, ticimax, dolar_kuru, output):
         if new_stok is None:
             ticimax_data["STOKADEDI"] = -1
             continue
-        new_stok["Price"] = process_price_data(dolar_kuru, new_stok["Price"])
+        # new_stok["Price"] = process_price_data(dolar_kuru, new_stok["Price"])
         if new_stok["Price"] == 0:
             ticimax_data["STOKADEDI"] = -1
             continue
