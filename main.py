@@ -22,12 +22,41 @@ import math
 
 #     return output_filename
 
+N11 = "N11"
+HEPSIBURADA = "HEPSIBURADA"
+PTTAVM = "PTTAVM"
+TRENDYOL = "TRENDYOL"
 
-def read_files_to_df(stok_filename, kargo_filename, ticimax_filename):
+BARKOD = "BARKOD"
+
+
+def read_files_to_df(
+    stok_filename,
+    kargo_filename,
+    ticimax_filename,
+    urunMarketYerleriKategorileri,
+    marketyeriKomisyonlari,
+):
     kargo_data = pd.read_excel(kargo_filename)
     stok_data = pd.read_excel(stok_filename)
     ticimax_data = pd.read_excel(ticimax_filename)
-    return kargo_data, stok_data, ticimax_data
+    market_place_categories = pd.read_excel(urunMarketYerleriKategorileri)
+    n11_categories = pd.read_excel(marketyeriKomisyonlari, sheet_name=N11)
+    hepsiburada_categories = pd.read_excel(
+        marketyeriKomisyonlari, sheet_name=HEPSIBURADA
+    )
+    pttavm_categories = pd.read_excel(marketyeriKomisyonlari, sheet_name=PTTAVM)
+    trendyol_categories = pd.read_excel(marketyeriKomisyonlari, sheet_name=TRENDYOL)
+    return (
+        kargo_data,
+        stok_data,
+        ticimax_data,
+        market_place_categories,
+        n11_categories,
+        hepsiburada_categories,
+        pttavm_categories,
+        trendyol_categories,
+    )
 
 
 def process_price_data(dolar_kuru, price_str):
@@ -48,7 +77,7 @@ def process_stock_data(stok_data_lst, dolar_kuru):
     result = {}
     for stok_data in stok_data_lst:
         new_stok = dict()
-        new_stok["BARKOD"] = stok_data["BARKOD"]
+        new_stok[BARKOD] = stok_data[BARKOD]
         prices = [0]
         for i in [1, 3]:
             field_name = f"L.Fiy. {i}"
@@ -58,53 +87,112 @@ def process_stock_data(stok_data_lst, dolar_kuru):
                 )
                 prices.append(stok_data[field_name])
             new_stok["Price"] = max(prices)
-        result[new_stok["BARKOD"]] = new_stok
+        result[new_stok[BARKOD]] = new_stok
     return result
 
 
-def main(stok, kargo, ticimax, dolar_kuru, output):
+def calculate_market_place_commission(
+    satis_fiyati, desi, kargo_data, categories, stock_market_place_category, fieldName
+):
+    son_fiyat = (satis_fiyati + kargo_data.iloc[desi + 1][fieldName]) * 1.20
+    category = stock_market_place_category.iloc[0][fieldName]
+    total_percentage = categories.iloc[3][category]
+    total_fix_cost = categories.iloc[4][category]
+    cost = (son_fiyat * total_percentage) / 100 + total_fix_cost
+    return son_fiyat + cost
+
+
+def main(
+    stok,
+    kargo,
+    ticimax,
+    dolar_kuru,
+    urunMarketYerleriKategorileri,
+    marketyeriKomisyonlari,
+    output,
+):
     """
     This function does something with the stok and kargo arguments.
     """
-    kargo_data, stok_data, ticimax_data = read_files_to_df(stok, kargo, ticimax)
-    stok_data = stok_data.loc[
+    (
+        kargo_data_df,
+        stok_data_df,
+        ticimax_data_df,
+        market_place_categories,
+        n11_categories,
+        hepsiburada_categories,
+        pttavm_categories,
+        trendyol_categories,
+    ) = read_files_to_df(
+        stok, kargo, ticimax, urunMarketYerleriKategorileri, marketyeriKomisyonlari
+    )
+    stok_data_df = stok_data_df.loc[
         :,
         [
             "Stok Kodu",
             "L.Fiy. 1",
             "L.Fiy. 3",
-        ],  # ["Stok Kodu", "L.Fiy. 1", "L.Fiy. 2", "L.Fiy. 3", "L.Fiy. 4", "L.Fiy. 5"]
+        ],
     ]
-    stok_data = stok_data.rename(columns={"Stok Kodu": "BARKOD"})
-    stok_data = stok_data[stok_data["BARKOD"].isin(ticimax_data["BARKOD"])]
+    stok_data_df = stok_data_df.rename(columns={"Stok Kodu": BARKOD})
+    stok_data_df[BARKOD] = stok_data_df[BARKOD].astype(str)
+    ticimax_data_df[BARKOD] = ticimax_data_df[BARKOD].astype(str)
+    market_place_categories[BARKOD] = market_place_categories[BARKOD].astype(str)
+    stok_data = stok_data_df[stok_data_df[BARKOD].isin(ticimax_data_df[BARKOD])]
     stok_data_lst = stok_data.to_dict("records")
     stok_data_dict = process_stock_data(stok_data_lst, dolar_kuru)
 
-    ticimax_data_lst = ticimax_data.to_dict("records")
+    ticimax_data_lst = ticimax_data_df.to_dict("records")
 
     for ticimax_data in ticimax_data_lst:
-        new_stok = stok_data_dict.get(ticimax_data["BARKOD"])
+        new_stok = stok_data_dict.get(ticimax_data[BARKOD])
+        stock_market_place_category = market_place_categories[
+            market_place_categories[BARKOD] == ticimax_data[BARKOD]
+        ]
         if new_stok is None:
             ticimax_data["STOKADEDI"] = -1
             continue
-        # new_stok["Price"] = process_price_data(dolar_kuru, new_stok["Price"])
         if new_stok["Price"] == 0:
+            ticimax_data["STOKADEDI"] = -1
+            continue
+        if stock_market_place_category.empty:
+            print(ticimax_data[BARKOD])
             ticimax_data["STOKADEDI"] = -1
             continue
         desi = math.ceil(ticimax_data["KARGOAGIRLIGI"])
         ticimax_data["SATISFIYATI"] = new_stok["Price"] * 1.15 * 1.20
-        ticimax_data["UYETIPIFIYAT1"] = (
-            new_stok["Price"] + kargo_data.loc[desi + 1]["N11"]
-        ) * 1.20
-        ticimax_data["UYETIPIFIYAT2"] = (
-            new_stok["Price"] + kargo_data.loc[desi + 1]["Hepsiburada"]
-        ) * 1.20
-        ticimax_data["UYETIPIFIYAT3"] = (
-            new_stok["Price"] + kargo_data.loc[desi + 1]["Trendyol"]
-        ) * 1.20
-        ticimax_data["UYETIPIFIYAT4"] = (
-            new_stok["Price"] + kargo_data.loc[desi + 1]["PTTAvm"]
-        ) * 1.20
+        ticimax_data["UYETIPIFIYAT1"] = calculate_market_place_commission(
+            new_stok["Price"],
+            desi,
+            kargo_data_df,
+            n11_categories,
+            stock_market_place_category,
+            N11,
+        )
+        ticimax_data["UYETIPIFIYAT2"] = calculate_market_place_commission(
+            new_stok["Price"],
+            desi,
+            kargo_data_df,
+            hepsiburada_categories,
+            stock_market_place_category,
+            HEPSIBURADA,
+        )
+        ticimax_data["UYETIPIFIYAT3"] = calculate_market_place_commission(
+            new_stok["Price"],
+            desi,
+            kargo_data_df,
+            trendyol_categories,
+            stock_market_place_category,
+            TRENDYOL,
+        )
+        ticimax_data["UYETIPIFIYAT4"] = calculate_market_place_commission(
+            new_stok["Price"],
+            desi,
+            kargo_data_df,
+            pttavm_categories,
+            stock_market_place_category,
+            PTTAVM,
+        )
 
     ticimax_data = pd.DataFrame(ticimax_data_lst)
     ticimax_data.to_excel(output, index=False)
@@ -112,12 +200,20 @@ def main(stok, kargo, ticimax, dolar_kuru, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stok", help="stock argument", default="stock_list.xlsx")
-    parser.add_argument(
-        "--kargo", help="cargo argument", default="kargo_bilgileri.xlsx"
-    )
+    parser.add_argument("--stok", help="stock argument", default="stokListesi.xlsx")
+    parser.add_argument("--kargo", help="cargo argument", default="kargoBilgileri.xlsx")
     parser.add_argument(
         "--ticimax", help="ticimax argument", default="TicimaxExport.xls"
+    )
+    parser.add_argument(
+        "--marketyeriKomisyonlari",
+        help="market yeri komisyonlari",
+        default="MarketyeriKomisyonlari.xlsx",
+    )
+    parser.add_argument(
+        "--urunMarketYerleriKategorileri",
+        help="urunMarketYerleriKategorileri",
+        default="UrunMarketYerleriKategorileri.xlsx",
     )
     parser.add_argument(
         "--dolar_kuru", help="ticimax argument", default=28.66, type=float
@@ -126,4 +222,12 @@ if __name__ == "__main__":
         "--output", help="output argument", default="TicimaxExport_updated.xlsx"
     )
     args = parser.parse_args()
-    main(args.stok, args.kargo, args.ticimax, args.dolar_kuru, args.output)
+    main(
+        args.stok,
+        args.kargo,
+        args.ticimax,
+        args.dolar_kuru,
+        args.urunMarketYerleriKategorileri,
+        args.marketyeriKomisyonlari,
+        args.output,
+    )
