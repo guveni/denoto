@@ -99,7 +99,7 @@ def calculate_market_place_commission(
     total_percentage = categories.iloc[3][category]
     total_fix_cost = categories.iloc[4][category]
     cost = (son_fiyat * total_percentage) / 100 + total_fix_cost
-    return son_fiyat + cost
+    return math.ceil(son_fiyat + cost)
 
 
 def main(
@@ -109,6 +109,7 @@ def main(
     dolar_kuru,
     urunMarketYerleriKategorileri,
     marketyeriKomisyonlari,
+    site_komisyonu,
     output,
 ):
     """
@@ -144,6 +145,8 @@ def main(
 
     ticimax_data_lst = ticimax_data_df.to_dict("records")
 
+    commission_rate = 1 + site_komisyonu / 100
+
     for ticimax_data in ticimax_data_lst:
         new_stok = stok_data_dict.get(ticimax_data[BARKOD])
         stock_market_place_category = market_place_categories[
@@ -160,7 +163,9 @@ def main(
             ticimax_data["STOKADEDI"] = -1
             continue
         desi = math.ceil(ticimax_data["KARGOAGIRLIGI"])
-        ticimax_data["SATISFIYATI"] = new_stok["Price"] * 1.15 * 1.20
+        ticimax_data["SATISFIYATI"] = math.ceil(
+            new_stok["Price"] * commission_rate * 1.20
+        )
         ticimax_data["UYETIPIFIYAT1"] = calculate_market_place_commission(
             new_stok["Price"],
             desi,
@@ -218,6 +223,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dolar_kuru", help="ticimax argument", default=28.66, type=float
     )
+    parser.add_argument("--site_komisyonu", help="site komisyonu", default=10, type=int)
     parser.add_argument(
         "--output", help="output argument", default="TicimaxExport_updated.xlsx"
     )
@@ -229,5 +235,6 @@ if __name__ == "__main__":
         args.dolar_kuru,
         args.urunMarketYerleriKategorileri,
         args.marketyeriKomisyonlari,
+        args.site_komisyonu,
         args.output,
     )
