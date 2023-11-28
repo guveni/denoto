@@ -39,7 +39,10 @@ def read_files_to_df(
     marketyeriKomisyonlari,
 ):
     kargo_data = pd.read_excel(kargo_filename)
-    stok_data = pd.read_excel(stok_filename)
+    try:
+        stok_data = pd.read_excel(stok_filename)
+    except Exception as e:
+        stok_data = pd.read_csv(stok_filename, sep=";")
     ticimax_data = pd.read_excel(ticimax_filename)
     market_place_categories = pd.read_excel(urunMarketYerleriKategorileri)
     n11_categories = pd.read_excel(marketyeriKomisyonlari, sheet_name=N11)

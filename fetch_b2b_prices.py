@@ -66,6 +66,7 @@ for i in range(0, 350000, step_size):
             stock_list.append(product_details[f"stock_{attr}"])
             product_details["Miktar"] = max(stock_list)
         product_details["L.Fiy. 1"] = get_list_price(product_details)
+        product_details["L.Fiy. 3"] = get_list_price(product_details)
         product_details.update(product.attrib)
         product_details["Stok Kodu"] = str(product_details["ProductCode"])
         product_list.append(product_details)
@@ -115,10 +116,16 @@ for product in product_list:
         result_product[key] = product[key]
     result_product_list.append(result_product)
 
-with open("product_list.csv", "w", newline="", encoding="utf-8") as csvfile:
+with open(
+    "product_list.csv",
+    "w",
+    newline="",
+    encoding="utf-8",
+) as csvfile:
     writer = csv.DictWriter(
         csvfile,
         fieldnames=row_names,
+        delimiter=";",
     )
     writer.writeheader()
     writer.writerows(result_product_list)
