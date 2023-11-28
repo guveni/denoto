@@ -3,6 +3,19 @@ import requests
 from xml.etree import ElementTree as ET
 import csv
 
+
+def get_list_price(details):
+    price = details["ListPriceWoVAT"]
+    currency_type = details["ListPriceCurrency"]
+
+    if currency_type == "USD":
+        currency = "$"
+    elif currency_type == "TLY":
+        # currency = "\u20BA"
+        currency = "₺"
+    return f"{price} {currency}"
+
+
 # Set the URL of the API endpoint
 # Set the username and password for basic authentication
 username = "gvn"
@@ -52,13 +65,11 @@ for i in range(0, 350000, step_size):
             product_details[f"stock_{attr}"] = int(stock.text.strip())
             stock_list.append(product_details[f"stock_{attr}"])
             product_details["Miktar"] = max(stock_list)
-        product_details["L.Fiy. 1"] = float(product_details["ListPriceWoVAT"])
+        product_details["L.Fiy. 1"] = get_list_price(product_details)
         product_details.update(product.attrib)
-        product_details["Stok Kodu"] = product_details["ProductCode"]
+        product_details["Stok Kodu"] = str(product_details["ProductCode"])
         product_list.append(product_details)
         row_names = row_names.union(product_details.keys())
-        # if product_details["ID"] == "113983":
-        #     print(product_details)
 
 row_names = row_names - set(
     [
@@ -86,20 +97,28 @@ row_names = row_names - set(
         "BrandID",
         "LocalNetPriceWoVat",
         "LocalNetPriceWVat",
+        "BaseOeNr",
+        "PiecesInBox",
+        "ListPriceCurrency",
+        "LocalCurrency",
+        "ListPriceWoVAT",
+        "LocalListPriceWoVat",
     ]
 )
+product_list = sorted(product_list, key=lambda x: x["Miktar"])
+result_product_list = []
+for product in product_list:
+    result_product = {}
+    for key in row_names:
+        if key not in product:
+            product[key] = ""
+        result_product[key] = product[key]
+    result_product_list.append(result_product)
+
 with open("product_list.csv", "w", newline="", encoding="utf-8") as csvfile:
     writer = csv.DictWriter(
         csvfile,
         fieldnames=row_names,
     )
     writer.writeheader()
-    product_list = sorted(product_list, key=lambda x: x["ListPriceWoVAT"])
-    for product in product_list:
-        result_product = {}
-        for key in row_names:
-            if key not in product:
-                product[key] = ""
-            result_product[key] = product[key]
-
-        writer.writerow(result_product)
+    writer.writerows(result_product_list)

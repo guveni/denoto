@@ -28,6 +28,7 @@ PTTAVM = "PTTAVM"
 TRENDYOL = "TRENDYOL"
 
 BARKOD = "BARKOD"
+STOK_KODU = "Stok Kodu"
 
 
 def read_files_to_df(
@@ -131,13 +132,15 @@ def main(
     stok_data_df = stok_data_df.loc[
         :,
         [
-            "Stok Kodu",
+            STOK_KODU,
             "L.Fiy. 1",
             "L.Fiy. 3",
             "Miktar",
         ],
     ]
-    stok_data_df = stok_data_df.rename(columns={"Stok Kodu": BARKOD})
+
+    if STOK_KODU in stok_data_df.columns:
+        stok_data_df = stok_data_df.rename(columns={STOK_KODU: BARKOD})
     stok_data_df[BARKOD] = stok_data_df[BARKOD].astype(str)
     ticimax_data_df[BARKOD] = ticimax_data_df[BARKOD].astype(str)
     market_place_categories[BARKOD] = market_place_categories[BARKOD].astype(str)
