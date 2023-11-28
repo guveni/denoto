@@ -78,6 +78,7 @@ def process_stock_data(stok_data_lst, dolar_kuru):
     for stok_data in stok_data_lst:
         new_stok = dict()
         new_stok[BARKOD] = stok_data[BARKOD]
+        new_stok["Miktar"] = stok_data["Miktar"]
         prices = [0]
         for i in [1, 3]:
             field_name = f"L.Fiy. {i}"
@@ -133,6 +134,7 @@ def main(
             "Stok Kodu",
             "L.Fiy. 1",
             "L.Fiy. 3",
+            "Miktar",
         ],
     ]
     stok_data_df = stok_data_df.rename(columns={"Stok Kodu": BARKOD})
@@ -159,9 +161,10 @@ def main(
             ticimax_data["STOKADEDI"] = -1
             continue
         if stock_market_place_category.empty:
-            print(ticimax_data[BARKOD])
             ticimax_data["STOKADEDI"] = -1
             continue
+
+        ticimax_data["STOKADEDI"] = new_stok["Miktar"]
         desi = math.ceil(ticimax_data["KARGOAGIRLIGI"])
         ticimax_data["SATISFIYATI"] = math.ceil(
             new_stok["Price"] * commission_rate * 1.20

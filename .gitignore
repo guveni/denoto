@@ -2,3 +2,4 @@
 *.xls
 .DS_Store
 .vscode
+*.csv
