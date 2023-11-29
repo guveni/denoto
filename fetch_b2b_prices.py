@@ -125,7 +125,7 @@ def main():
             "LocalListPriceWoVat",
         ]
     )
-    product_list = sorted(product_list, key=lambda x: x["Miktar"])
+    product_list = sorted(product_list, key=lambda x: x["Miktar"], reverse=True)
     result_product_list = []
     for product in product_list:
         result_product = {}
