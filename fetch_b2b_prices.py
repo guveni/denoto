@@ -24,6 +24,8 @@ def get_list_price(details):
     elif currency_type == "TLY":
         # currency = "\u20BA"
         currency = "₺"
+    elif currency_type == "EUR":
+        currency = "€"
     return f"{price} {currency}"
 
 
