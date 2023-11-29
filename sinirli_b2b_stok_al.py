@@ -8,11 +8,12 @@ import concurrent.futures
 
 # Set the URL of the API endpoint
 # Set the username and password for basic authentication
-username = "gvn"
+username = "botsinirli"
 password = "KFAKsgjxseLV57"
-step_size = 25000
-last_product = 330000
-thread_count = 5
+step_size = 100000
+last_product = 340000
+first_product = 0
+thread_count = 4
 
 
 def get_list_price(details):
@@ -42,7 +43,7 @@ def fetch_products(start, end):
     root = ET.fromstring(xml_str)
     products = root.findall(".//Product")
     session.close()
-    product_list = []
+    product_map = {}
     row_names = set()
     for product in products:
         product_details = {}
@@ -68,29 +69,33 @@ def fetch_products(start, end):
         product_details["L.Fiy. 3"] = get_list_price(product_details)
         product_details.update(product.attrib)
         product_details["Stok Kodu"] = str(product_details["ProductCode"])
-        product_list.append(product_details)
+
+        product_map[product_details["ID"]] = product_details
+
         row_names = row_names.union(product_details.keys())
-    return product_list, row_names
+    return product_map, row_names
 
 
 def main():
     start_time = time.time()
     # Create a session with basic authentication
 
-    product_list = []
     futures = []
     row_names = set()
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
         # Submit the fetch_products function for each iteration
-        for i in range(0, last_product, step_size):
-            future = executor.submit(fetch_products, i, i + step_size)
+        for i in range(first_product, last_product, step_size):
+            next_step = i + step_size
+            if next_step > last_product:
+                next_step = last_product
+            future = executor.submit(fetch_products, i, next_step)
             futures.append(future)
 
     # Wait for all futures to complete and get the results
-    product_list = []
+    product_dict = {}
     for future in concurrent.futures.as_completed(futures):
-        result, row_names = future.result()
-        product_list.extend(result)
+        result_dict, row_names = future.result()
+        product_dict.update(result_dict)
 
         # Sort the product list
 
@@ -128,7 +133,9 @@ def main():
             "LocalListPriceWoVat",
         ]
     )
-    product_list = sorted(product_list, key=lambda x: x["Miktar"], reverse=True)
+    product_list = sorted(
+        product_dict.values(), key=lambda x: x["Miktar"], reverse=True
+    )
     result_product_list = []
     for product in product_list:
         result_product = {}
@@ -139,7 +146,7 @@ def main():
         result_product_list.append(result_product)
 
     with open(
-        "product_list.csv",
+        "sinirli_stoklar.csv",
         "w",
         newline="",
         encoding="utf-8",
