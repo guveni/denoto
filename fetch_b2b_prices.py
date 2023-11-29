@@ -39,6 +39,7 @@ def fetch_products(start, end):
     xml_str = response.content.decode("utf-8-sig")
     root = ET.fromstring(xml_str)
     products = root.findall(".//Product")
+    session.close()
     product_list = []
     row_names = set()
     for product in products:
