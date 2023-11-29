@@ -10,9 +10,9 @@ import concurrent.futures
 # Set the username and password for basic authentication
 username = "gvn"
 password = "KFAKsgjxseLV57"
-step_size = 1000
+step_size = 50000
 last_product = 330000
-thread_count = 50
+thread_count = 4
 
 
 def get_list_price(details):
