@@ -2,6 +2,7 @@
 import requests
 from xml.etree import ElementTree as ET
 import csv
+import time
 
 
 def get_list_price(details):
@@ -20,8 +21,10 @@ def get_list_price(details):
 # Set the username and password for basic authentication
 username = "gvn"
 password = "KFAKsgjxseLV57"
-step_size = 350000
+step_size = 1000
 
+
+start_time = time.time()
 # Create a session with basic authentication
 session = requests.Session()
 session.auth = (username, password)
@@ -129,3 +132,9 @@ with open(
     )
     writer.writeheader()
     writer.writerows(result_product_list)
+
+end_time = time.time()
+# Calculate the duration
+duration = end_time - start_time
+
+print(f"The script took {duration} seconds to run.")
