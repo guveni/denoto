@@ -4,6 +4,9 @@ from xml.etree import ElementTree as ET
 import csv
 import time
 import concurrent.futures
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 # Set the URL of the API endpoint
@@ -13,7 +16,10 @@ password = "KFAKsgjxseLV57"
 step_size = 100000
 last_product = 340000
 first_product = 0
-thread_count = 4
+thread_count = 1
+timeout = 60
+retry_count = 3
+sleep_time = 10
 
 
 def get_list_price(details):
@@ -31,49 +37,59 @@ def get_list_price(details):
 
 
 def fetch_products(start, end):
-    session = requests.Session()
-    session.auth = (username, password)
-    url = f"http://denoto.sistemyazilim.com:4033/XmlService/GetAllProductsByParts/{start}/{end}"
-    print(f"Fetching products from {start} to {end}")
-    response = session.get(url)
-    if response.status_code != 200:
-        print("Error:", response.status_code)
-        return []
-    xml_str = response.content.decode("utf-8-sig")
-    root = ET.fromstring(xml_str)
-    products = root.findall(".//Product")
-    session.close()
-    product_map = {}
-    row_names = set()
-    for product in products:
-        product_details = {}
-        for child in product:
-            if child.tag in ["Pricing", "Stocks"]:
-                continue
-            result = child.text
-            if child.text is not None:
-                result = child.text.strip()
-            else:
-                result = ""
-            product_details[child.tag] = result
-        for child in product.find("Pricing"):
-            product_details[child.tag] = child.text.strip()
-        stock_list = []
-        stocks = product.find("Stocks")
-        for stock in stocks:
-            attr = stock.attrib["WarehouseID"]
-            product_details[f"stock_{attr}"] = int(stock.text.strip())
-            stock_list.append(product_details[f"stock_{attr}"])
-            product_details["Miktar"] = max(stock_list)
-        product_details["L.Fiy. 1"] = get_list_price(product_details)
-        product_details["L.Fiy. 3"] = get_list_price(product_details)
-        product_details.update(product.attrib)
-        product_details["Stok Kodu"] = str(product_details["ProductCode"])
+    def _fetch_products(start, end):
+        session = requests.Session()
+        session.auth = (username, password)
+        url = f"http://denoto.sistemyazilim.com:4033/XmlService/GetAllProductsByParts/{start}/{end}"
+        logging.info("Fetching products from %s to %s", start, end)
+        response = session.get(url, timeout=timeout)
+        if response.status_code != 200:
+            raise Exception(f"Error : {response.status_code}")
+        xml_str = response.content.decode("utf-8-sig")
+        root = ET.fromstring(xml_str)
+        products = root.findall(".//Product")
+        session.close()
+        product_map = {}
+        row_names = set()
+        for product in products:
+            product_details = {}
+            for child in product:
+                if child.tag in ["Pricing", "Stocks"]:
+                    continue
+                result = child.text
+                if child.text is not None:
+                    result = child.text.strip()
+                else:
+                    result = ""
+                product_details[child.tag] = result
+            for child in product.find("Pricing"):
+                product_details[child.tag] = child.text.strip()
+            stock_list = []
+            stocks = product.find("Stocks")
+            for stock in stocks:
+                attr = stock.attrib["WarehouseID"]
+                product_details[f"stock_{attr}"] = int(stock.text.strip())
+                stock_list.append(product_details[f"stock_{attr}"])
+                product_details["Miktar"] = max(stock_list)
+            product_details["L.Fiy. 1"] = get_list_price(product_details)
+            product_details["L.Fiy. 3"] = get_list_price(product_details)
+            product_details.update(product.attrib)
+            product_details["Stok Kodu"] = str(product_details["ProductCode"])
 
-        product_map[product_details["ID"]] = product_details
+            product_map[product_details["ID"]] = product_details
 
-        row_names = row_names.union(product_details.keys())
-    return product_map, row_names
+            row_names = row_names.union(product_details.keys())
+        return product_map, row_names
+
+    for i in range(retry_count):
+        try:
+            return _fetch_products(start, end)
+        except Exception as e:
+            logging.debug(f"Error {start} - {end}: {e}")
+            time.sleep(sleep_time * i)
+            continue
+    logging.warning(f"No data for {start} - {end}")
+    return dict(), set()
 
 
 def main():
@@ -146,7 +162,7 @@ def main():
         result_product_list.append(result_product)
 
     with open(
-        "sinirli_stoklar.csv",
+        "tum_stoklar.csv",
         "w",
         newline="",
         encoding="utf-8",
