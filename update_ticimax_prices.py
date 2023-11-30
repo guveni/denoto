@@ -209,12 +209,15 @@ def main(
         )
 
     ticimax_data = pd.DataFrame(ticimax_data_lst)
+
+    ticimax_data = ticimax_data.sort_values(by="STOKADEDI", ascending=True)
     ticimax_data.to_excel(output, index=False)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stok", help="stock argument", default="stokListesi.xlsx")
+    # parser.add_argument("--stok", help="stock argument", default="stokListesi.xlsx")
+    parser.add_argument("--stok", help="stock argument", default="sinirli_stoklar.csv")
     parser.add_argument("--kargo", help="cargo argument", default="kargoBilgileri.xlsx")
     parser.add_argument(
         "--ticimax", help="ticimax argument", default="TicimaxExport.xls"
