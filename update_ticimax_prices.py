@@ -28,6 +28,7 @@ PTTAVM = "PTTAVM"
 TRENDYOL = "TRENDYOL"
 
 BARKOD = "BARKOD"
+STOK_KODU = "Stok Kodu"
 
 
 def read_files_to_df(
@@ -38,7 +39,10 @@ def read_files_to_df(
     marketyeriKomisyonlari,
 ):
     kargo_data = pd.read_excel(kargo_filename)
-    stok_data = pd.read_excel(stok_filename)
+    try:
+        stok_data = pd.read_excel(stok_filename)
+    except Exception as e:
+        stok_data = pd.read_csv(stok_filename, sep=";")
     ticimax_data = pd.read_excel(ticimax_filename)
     market_place_categories = pd.read_excel(urunMarketYerleriKategorileri)
     n11_categories = pd.read_excel(marketyeriKomisyonlari, sheet_name=N11)
@@ -131,13 +135,15 @@ def main(
     stok_data_df = stok_data_df.loc[
         :,
         [
-            "Stok Kodu",
+            STOK_KODU,
             "L.Fiy. 1",
             "L.Fiy. 3",
             "Miktar",
         ],
     ]
-    stok_data_df = stok_data_df.rename(columns={"Stok Kodu": BARKOD})
+
+    if STOK_KODU in stok_data_df.columns:
+        stok_data_df = stok_data_df.rename(columns={STOK_KODU: BARKOD})
     stok_data_df[BARKOD] = stok_data_df[BARKOD].astype(str)
     ticimax_data_df[BARKOD] = ticimax_data_df[BARKOD].astype(str)
     market_place_categories[BARKOD] = market_place_categories[BARKOD].astype(str)
@@ -203,12 +209,15 @@ def main(
         )
 
     ticimax_data = pd.DataFrame(ticimax_data_lst)
+
+    ticimax_data = ticimax_data.sort_values(by="STOKADEDI", ascending=True)
     ticimax_data.to_excel(output, index=False)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stok", help="stock argument", default="stokListesi.xlsx")
+    # parser.add_argument("--stok", help="stock argument", default="stokListesi.xlsx")
+    parser.add_argument("--stok", help="stock argument", default="sinirli_stoklar.csv")
     parser.add_argument("--kargo", help="cargo argument", default="kargoBilgileri.xlsx")
     parser.add_argument(
         "--ticimax", help="ticimax argument", default="TicimaxExport.xls"
