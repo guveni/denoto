@@ -13,10 +13,10 @@ logging.basicConfig(level=logging.INFO)
 # Set the username and password for basic authentication
 username = "botsinirli"
 password = "KFAKsgjxseLV57"
-step_size = 100000
+step_size = 10000
 last_product = 340000
 first_product = 0
-thread_count = 1
+thread_count = 10
 timeout = 60
 retry_count = 3
 sleep_time = 10
@@ -162,7 +162,7 @@ def main():
         result_product_list.append(result_product)
 
     with open(
-        "tum_stoklar.csv",
+        "sinirli_stoklar.csv",
         "w",
         newline="",
         encoding="utf-8",
