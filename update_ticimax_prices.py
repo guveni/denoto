@@ -29,6 +29,7 @@ TRENDYOL = "TRENDYOL"
 
 BARKOD = "BARKOD"
 STOK_KODU = "Stok Kodu"
+HATA_KODU = "HATA"
 
 
 def read_files_to_df(
@@ -160,14 +161,24 @@ def main(
         stock_market_place_category = market_place_categories[
             market_place_categories[BARKOD] == ticimax_data[BARKOD]
         ]
+        ticimax_data[HATA_KODU] = ""
         if new_stok is None:
             ticimax_data["STOKADEDI"] = -1
+            ticimax_data[
+                HATA_KODU
+            ] = "Stok bulunamadi: --stok argumani ile verdigin dosyadaki stok kodlari ile ticimax barkod kodlari eslesmedi"
             continue
         if new_stok["Price"] == 0:
             ticimax_data["STOKADEDI"] = -1
+            ticimax_data[
+                HATA_KODU
+            ] = "Fiyat bulunamadi: --stok argumani ile verdigin dosyadaki fiyatlar dogru girilmemis"
             continue
         if stock_market_place_category.empty:
             ticimax_data["STOKADEDI"] = -1
+            ticimax_data[
+                HATA_KODU
+            ] = "Dogru kategori bulunamadi: --urunMarketYerleriKategorileri argumani ile verdigin dosyadaki kategoriler dogru girilmemis"
             continue
 
         ticimax_data["STOKADEDI"] = new_stok["Miktar"]
