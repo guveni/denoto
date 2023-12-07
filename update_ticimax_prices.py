@@ -42,7 +42,7 @@ def read_files_to_df(
     kargo_data = pd.read_excel(kargo_filename)
     try:
         stok_data = pd.read_excel(stok_filename)
-    except Exception as e:
+    except Exception:
         stok_data = pd.read_csv(stok_filename, sep=";")
     ticimax_data = pd.read_excel(ticimax_filename)
     market_place_categories = pd.read_excel(urunMarketYerleriKategorileri)
@@ -106,6 +106,22 @@ def calculate_market_place_commission(
     total_fix_cost = categories.iloc[4][category]
     cost = (son_fiyat * total_percentage) / 100 + total_fix_cost
     return math.ceil(son_fiyat + cost)
+
+
+def assign_stock_brackets(stock_num):
+    if stock_num > 500:
+        stock_num = math.floor(stock_num * 0.1)  # 10% of the stock
+    elif stock_num > 100:
+        stock_num = 20
+    elif stock_num > 50:
+        stock_num = 5
+    elif stock_num > 10:
+        stock_num = 3
+    elif stock_num > 1:
+        stock_num = 1
+    else:
+        stock_num = stock_num
+    return stock_num
 
 
 def main(
@@ -181,7 +197,7 @@ def main(
             ] = "Dogru kategori bulunamadi: --urunMarketYerleriKategorileri argumani ile verdigin dosyadaki kategoriler dogru girilmemis"
             continue
 
-        ticimax_data["STOKADEDI"] = new_stok["Miktar"]
+        ticimax_data["STOKADEDI"] = assign_stock_brackets(new_stok["Miktar"])
         desi = math.ceil(ticimax_data["KARGOAGIRLIGI"])
         ticimax_data["SATISFIYATI"] = math.ceil(
             new_stok["Price"] * commission_rate * 1.20
