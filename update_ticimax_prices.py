@@ -30,6 +30,7 @@ TRENDYOL = "TRENDYOL"
 BARKOD = "BARKOD"
 STOK_KODU = "Stok Kodu"
 HATA_KODU = "HATA"
+KDV = 1.20
 
 
 def read_files_to_df(
@@ -100,7 +101,7 @@ def process_stock_data(stok_data_lst, dolar_kuru):
 def calculate_market_place_commission(
     satis_fiyati, desi, kargo_data, categories, stock_market_place_category, fieldName
 ):
-    son_fiyat = (satis_fiyati + kargo_data.iloc[desi + 1][fieldName]) * 1.20
+    son_fiyat = (satis_fiyati + kargo_data.iloc[desi + 1][fieldName]) * KDV
     category = stock_market_place_category.iloc[0][fieldName]
     total_percentage = categories.iloc[3][category]
     total_fix_cost = categories.iloc[4][category]
@@ -131,7 +132,8 @@ def main(
     dolar_kuru,
     urunMarketYerleriKategorileri,
     marketyeriKomisyonlari,
-    site_komisyonu,
+    website_comission,
+    market_place_commission,
     output,
 ):
     """
@@ -170,7 +172,8 @@ def main(
 
     ticimax_data_lst = ticimax_data_df.to_dict("records")
 
-    commission_rate = 1 + site_komisyonu / 100
+    website_commission = 1 + website_comission / 100
+    market_place_comission = 1 + market_place_commission / 100
 
     for ticimax_data in ticimax_data_lst:
         new_stok = stok_data_dict.get(ticimax_data[BARKOD])
@@ -197,13 +200,16 @@ def main(
             ] = "Dogru kategori bulunamadi: --urunMarketYerleriKategorileri argumani ile verdigin dosyadaki kategoriler dogru girilmemis"
             continue
 
+        website_price = math.ceil(new_stok["Price"] * website_commission * KDV)
+        market_place_price_before_tax = math.ceil(
+            new_stok["Price"] * market_place_comission
+        )
+
         ticimax_data["STOKADEDI"] = assign_stock_brackets(new_stok["Miktar"])
         desi = math.ceil(ticimax_data["KARGOAGIRLIGI"])
-        ticimax_data["SATISFIYATI"] = math.ceil(
-            new_stok["Price"] * commission_rate * 1.20
-        )
+        ticimax_data["SATISFIYATI"] = website_price
         ticimax_data["UYETIPIFIYAT1"] = calculate_market_place_commission(
-            new_stok["Price"],
+            market_place_price_before_tax,
             desi,
             kargo_data_df,
             n11_categories,
@@ -211,7 +217,7 @@ def main(
             N11,
         )
         ticimax_data["UYETIPIFIYAT2"] = calculate_market_place_commission(
-            new_stok["Price"],
+            market_place_price_before_tax,
             desi,
             kargo_data_df,
             hepsiburada_categories,
@@ -219,7 +225,7 @@ def main(
             HEPSIBURADA,
         )
         ticimax_data["UYETIPIFIYAT3"] = calculate_market_place_commission(
-            new_stok["Price"],
+            market_place_price_before_tax,
             desi,
             kargo_data_df,
             trendyol_categories,
@@ -227,7 +233,7 @@ def main(
             TRENDYOL,
         )
         ticimax_data["UYETIPIFIYAT4"] = calculate_market_place_commission(
-            new_stok["Price"],
+            market_place_price_before_tax,
             desi,
             kargo_data_df,
             pttavm_categories,
@@ -259,10 +265,14 @@ if __name__ == "__main__":
         help="urunMarketYerleriKategorileri",
         default="UrunMarketYerleriKategorileri.xlsx",
     )
+    parser.add_argument("--dolar_kuru", help="ticimax argument", default=30, type=float)
+    parser.add_argument("--site_komisyonu", help="site komisyonu", default=15, type=int)
     parser.add_argument(
-        "--dolar_kuru", help="ticimax argument", default=28.66, type=float
+        "--market_yeri_ekstra_komisyon",
+        help="marketyeri komisyonu",
+        default=5,
+        type=int,
     )
-    parser.add_argument("--site_komisyonu", help="site komisyonu", default=10, type=int)
     parser.add_argument(
         "--output", help="output argument", default="TicimaxExport_updated.xlsx"
     )
@@ -275,5 +285,6 @@ if __name__ == "__main__":
         args.urunMarketYerleriKategorileri,
         args.marketyeriKomisyonlari,
         args.site_komisyonu,
+        args.market_yeri_ekstra_komisyon,
         args.output,
     )
