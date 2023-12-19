@@ -27,6 +27,8 @@ HEPSIBURADA = "HEPSIBURADA"
 PTTAVM = "PTTAVM"
 TRENDYOL = "TRENDYOL"
 
+KARGOAGIRLIGI = "KARGOAGIRLIGI"
+STOKADEDI = "STOKADEDI"
 BARKOD = "BARKOD"
 STOK_KODU = "Stok Kodu"
 HATA_KODU = "HATA"
@@ -182,19 +184,19 @@ def main(
         ]
         ticimax_data[HATA_KODU] = ""
         if new_stok is None:
-            ticimax_data["STOKADEDI"] = -1
+            ticimax_data[STOKADEDI] = -1
             ticimax_data[
                 HATA_KODU
             ] = "Stok bulunamadi: --stok argumani ile verdigin dosyadaki stok kodlari ile ticimax barkod kodlari eslesmedi"
             continue
         if new_stok["Price"] == 0:
-            ticimax_data["STOKADEDI"] = -1
+            ticimax_data[STOKADEDI] = -1
             ticimax_data[
                 HATA_KODU
             ] = "Fiyat bulunamadi: --stok argumani ile verdigin dosyadaki fiyatlar dogru girilmemis"
             continue
         if stock_market_place_category.empty:
-            ticimax_data["STOKADEDI"] = -1
+            ticimax_data[STOKADEDI] = -1
             ticimax_data[
                 HATA_KODU
             ] = "Dogru kategori bulunamadi: --urunMarketYerleriKategorileri argumani ile verdigin dosyadaki kategoriler dogru girilmemis"
@@ -205,8 +207,8 @@ def main(
             new_stok["Price"] * market_place_comission
         )
 
-        ticimax_data["STOKADEDI"] = assign_stock_brackets(new_stok["Miktar"])
-        desi = math.ceil(ticimax_data["KARGOAGIRLIGI"])
+        ticimax_data[STOKADEDI] = assign_stock_brackets(new_stok["Miktar"])
+        desi = math.ceil(ticimax_data[KARGOAGIRLIGI])
         ticimax_data["SATISFIYATI"] = website_price
         ticimax_data["UYETIPIFIYAT1"] = calculate_market_place_commission(
             market_place_price_before_tax,
@@ -243,7 +245,7 @@ def main(
 
     ticimax_data = pd.DataFrame(ticimax_data_lst)
 
-    ticimax_data = ticimax_data.sort_values(by="STOKADEDI", ascending=True)
+    ticimax_data = ticimax_data.sort_values(by=STOKADEDI, ascending=True)
     ticimax_data.to_excel(output, index=False)
 
 
